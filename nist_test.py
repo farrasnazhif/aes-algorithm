@@ -3,8 +3,8 @@ from aes import AES128
 
 def main():
     key = bytes.fromhex('00000000000000000000000000000000')
-    plain = bytes.fromhex('80000000000000000000000000000000')
-    expected = '3ad78e726c1ec02b7ebfe92b23d9ec34'
+    plain = bytes.fromhex('fffffffffffc00000000000000000000')
+    expected = '678034dc9e41b5a560ed239eeab1bc78'
     aes = AES128(key)
 
     if((aes.encrypt_block(plain).hex() == expected) and 
