@@ -2,7 +2,23 @@ import argparse
 import json
 import secrets
 import socket
+import threading
 from common import ascii_key, open_seal, recv, seal, send, show
+
+
+def receive_chat(conn, ks):
+    while True:
+        try:
+            message = recv(conn)
+            if message.get('type') != 'chat':
+                continue
+            print('\n[Alice ciphertext hex]', message['packet']['ciphertext'])
+            print('[Alice plaintext]', open_seal(ks, message['packet']).decode('ascii'))
+        except (ConnectionError, OSError):
+            print('\nAlice disconnected')
+            return
+        except Exception as exc:
+            print('Invalid message:', exc)
 
 
 def main():
@@ -35,8 +51,14 @@ def main():
                     answer = open_seal(ks, step5['packet']).decode('ascii')
                     if step5.get('type') != 'proof' or answer != n2[::-1]:
                         raise ValueError('Challenge verification failed')
-                    print('(5) Alice authenticated.')
+                    print('(5) Alice authenticated. AES chat enabled.')
                     send(conn, {'type': 'ready'})
+                    threading.Thread(target=receive_chat, args=(conn, ks), daemon=True).start()
+                    while True:
+                        line = input('Bob> ')
+                        packet = seal(ks, line.encode('ascii'))
+                        send(conn, {'type': 'chat', 'packet': packet})
+                        show('Bob', packet)
                 except (ConnectionError, BrokenPipeError, OSError, EOFError):
                     print('Connection ended; waiting for Alice again')
                 except Exception as exc:
