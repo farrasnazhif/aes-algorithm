@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 import json
-import msvcrt
 import os
 import queue
 import secrets
@@ -9,6 +8,11 @@ import sys
 import threading
 import paho.mqtt.client as mqtt
 from aes import AES128
+
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
 
 BROKER = 'broker.emqx.io'
 PORT = 1883
@@ -62,20 +66,32 @@ class MqttChannel:
 
 class ConsoleChat:
     def __init__(self, prompt):
-        os.system('')
+        if os.name == 'nt':
+            os.system('')
         self.prompt = prompt
         self.buffer = []
         self.lock = threading.Lock()
 
     def display_incoming(self, sender_label, cipher_hex, plain_text):
         with self.lock:
-            sys.stdout.write('\r\033[K')
-            sys.stdout.write(f'[{sender_label} ciphertext hex] {cipher_hex}\n')
-            sys.stdout.write(f'[{sender_label} plaintext] {plain_text}\n')
-            sys.stdout.write(self.prompt + ''.join(self.buffer))
-            sys.stdout.flush()
+            if msvcrt is not None:
+                # Jalur Windows
+                sys.stdout.write('\r\033[K')
+                sys.stdout.write(f'[{sender_label} ciphertext hex] {cipher_hex}\n')
+                sys.stdout.write(f'[{sender_label} plaintext] {plain_text}\n')
+                sys.stdout.write(self.prompt + ''.join(self.buffer))
+                sys.stdout.flush()
+            else:
+                # Jalur non-Windows
+                print(f'\n[{sender_label} ciphertext hex] {cipher_hex}')
+                print(f'[{sender_label} plaintext] {plain_text}')
 
     def readline(self):
+        if msvcrt is None:
+            # Jalur non-Windows
+            return input(self.prompt)
+
+        # Jalur Windows
         with self.lock:
             self.buffer = []
             sys.stdout.write(self.prompt)
