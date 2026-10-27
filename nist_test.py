@@ -1,3 +1,6 @@
+# NIST Source
+# https://csrc.nist.gov/csrc/media/projects/cryptographic-algorithm-validation-program/documents/aes/aesavs.pdf
+
 from aes import AES128
 
 
