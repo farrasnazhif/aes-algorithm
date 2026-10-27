@@ -1,22 +1,22 @@
 import json
 import secrets
 import threading
-from common import BROKER, PORT, ascii_key, connect, open_seal, recv, seal, send, show
+from common import BROKER, PORT, ConsoleChat, ascii_key, connect, open_seal, recv, seal, send, show
 
 
-def receive_chat(conn, ks):
+def receive_chat(conn, ks, chat):
     while True:
         try:
             message = recv(conn)
             if message.get('type') != 'chat':
                 continue
-            print('\n[Alice ciphertext hex]', message['packet']['ciphertext'])
-            print('[Alice plaintext]', open_seal(ks, message['packet']).decode('ascii'))
+            plain = open_seal(ks, message['packet']).decode('ascii')
+            chat.display_incoming('Alice', message['packet']['ciphertext'], plain)
         except (ConnectionError, OSError):
             print('\nAlice disconnected')
             return
         except Exception as exc:
-            print('Invalid message:', exc)
+            print('Session failed:', exc)
 
 
 def main():
@@ -42,9 +42,10 @@ def main():
                     raise ValueError('Challenge verification failed')
                 print('(5) Alice authenticated. AES chat enabled.')
                 send(conn, {'type': 'ready'})
-                threading.Thread(target=receive_chat, args=(conn, ks), daemon=True).start()
+                chat = ConsoleChat('Bob> ')
+                threading.Thread(target=receive_chat, args=(conn, ks, chat), daemon=True).start()
                 while True:
-                    line = input('Bob> ')
+                    line = chat.readline()
                     packet = seal(ks, line.encode('ascii'))
                     send(conn, {'type': 'chat', 'packet': packet})
                     show('Bob', packet)
@@ -55,4 +56,6 @@ def main():
 
 
 if __name__ == '__main__':
+    main()
+
     main()

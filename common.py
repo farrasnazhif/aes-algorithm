@@ -1,8 +1,11 @@
 import hashlib
 import hmac
 import json
+import msvcrt
+import os
 import queue
 import secrets
+import sys
 import threading
 import paho.mqtt.client as mqtt
 from aes import AES128
@@ -55,6 +58,53 @@ class MqttChannel:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.client.loop_stop()
         self.client.disconnect()
+
+
+class ConsoleChat:
+    def __init__(self, prompt):
+        os.system('')
+        self.prompt = prompt
+        self.buffer = []
+        self.lock = threading.Lock()
+
+    def display_incoming(self, sender_label, cipher_hex, plain_text):
+        with self.lock:
+            sys.stdout.write('\r\033[K')
+            sys.stdout.write(f'[{sender_label} ciphertext hex] {cipher_hex}\n')
+            sys.stdout.write(f'[{sender_label} plaintext] {plain_text}\n')
+            sys.stdout.write(self.prompt + ''.join(self.buffer))
+            sys.stdout.flush()
+
+    def readline(self):
+        with self.lock:
+            self.buffer = []
+            sys.stdout.write(self.prompt)
+            sys.stdout.flush()
+        while True:
+            ch = msvcrt.getwch()
+            if ch in ('\x00', '\xe0'):
+                msvcrt.getwch()
+                continue
+            if ch in ('\r', '\n'):
+                with self.lock:
+                    line = ''.join(self.buffer)
+                    self.buffer = []
+                    sys.stdout.write('\n')
+                    sys.stdout.flush()
+                    return line
+            elif ch == '\x08':
+                with self.lock:
+                    if self.buffer:
+                        self.buffer.pop()
+                        sys.stdout.write('\b \b')
+                        sys.stdout.flush()
+            elif ch == '\x03':
+                raise KeyboardInterrupt
+            elif ch >= ' ':
+                with self.lock:
+                    self.buffer.append(ch)
+                    sys.stdout.write(ch)
+                    sys.stdout.flush()
 
 
 def ascii_key(value):

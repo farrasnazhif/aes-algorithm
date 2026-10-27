@@ -1,17 +1,17 @@
 import json
 import secrets
 import threading
-from common import ascii_key, connect, open_seal, recv, seal, send, show
+from common import ConsoleChat, ascii_key, connect, open_seal, recv, seal, send, show
 
 
-def receive_chat(conn, ks):
+def receive_chat(conn, ks, chat):
     while True:
         try:
             message = recv(conn)
             if message.get('type') != 'chat':
                 continue
-            print('\n[Bob ciphertext hex]', message['packet']['ciphertext'])
-            print('[Bob plaintext]', open_seal(ks, message['packet']).decode('ascii'))
+            plain = open_seal(ks, message['packet']).decode('ascii')
+            chat.display_incoming('Bob', message['packet']['ciphertext'], plain)
         except (ConnectionError, OSError):
             print('\nBob disconnected')
             return
@@ -45,9 +45,10 @@ def main():
         if recv(bob).get('type') != 'ready':
             raise ValueError('Bob did not accept authentication')
         print('AES chat enabled; type ASCII messages')
-        threading.Thread(target=receive_chat, args=(bob, ks), daemon=True).start()
+        chat = ConsoleChat('Alice> ')
+        threading.Thread(target=receive_chat, args=(bob, ks, chat), daemon=True).start()
         while True:
-            line = input('Alice> ')
+            line = chat.readline()
             packet = seal(ks, line.encode('ascii'))
             send(bob, {'type': 'chat', 'packet': packet})
             show('Alice', packet)
