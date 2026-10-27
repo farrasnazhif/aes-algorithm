@@ -2,9 +2,9 @@ from aes import AES128
 
 
 def main():
-    key = bytes.fromhex('000102030405060708090a0b0c0d0e0f')
-    plain = bytes.fromhex('00112233445566778899aabbccddeeff')
-    expected = '69c4e0d86a7b0430d8cdb78070b4c55a'
+    key = bytes.fromhex('00000000000000000000000000000000')
+    plain = bytes.fromhex('80000000000000000000000000000000')
+    expected = '3ad78e726c1ec02b7ebfe92b23d9ec34'
     aes = AES128(key)
 
     if((aes.encrypt_block(plain).hex() == expected) and 
