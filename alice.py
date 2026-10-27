@@ -1,4 +1,3 @@
-import argparse
 import json
 import secrets
 import threading
@@ -21,15 +20,9 @@ def receive_chat(conn, ks):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--kdc', required=True)
-    parser.add_argument('--kdc-port', type=int, default=9000)
-    parser.add_argument('--bob', required=True)
-    parser.add_argument('--bob-port', type=int, default=9002)
-    args = parser.parse_args()
     ka = ascii_key(input('Alice-KDC key Ka (16 ASCII): '))
     n1 = secrets.token_hex(16)
-    with connect(args.kdc, args.kdc_port) as kdc:
+    with connect('alice_kdc') as kdc:
         send(kdc, {'type': 'request', 'alice': 'Alice', 'bob': 'Bob', 'n1': n1})
         print('(1) KDC request sent, N1:', n1)
         reply = recv(kdc)
@@ -39,7 +32,7 @@ def main():
     ks = bytes.fromhex(data['ks'])
     print('(2) KDC reply decrypted, N1 verified')
     show('KDC response', reply['payload'])
-    with connect(args.bob, args.bob_port) as bob:
+    with connect('alice_bob') as bob:
         send(bob, {'type': 'ticket', 'ticket': data['ticket']})
         print('(3) Ticket forwarded to Bob')
         challenge = recv(bob)
